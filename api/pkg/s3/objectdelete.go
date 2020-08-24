@@ -28,7 +28,12 @@ func (s *APIService) ObjectDelete(request *restful.Request, response *restful.Re
 	url := request.Request.URL
 	bucketName := request.PathParameter("bucketName")
 	objectName := request.PathParameter("objectKey")
-	version := url.Query().Get("versionId")
+	versionId := request.Request.URL.Query().Get(common.REQUEST_QUERY_VERSION_ID)
+	if versionId != ""{
+		objectName = objectName + "_" + versionId
+	}
+
+
 	if strings.HasSuffix(url.String(), "/") { // This is for folder.
 		objectName = objectName + "/"
 	}
@@ -44,9 +49,6 @@ func (s *APIService) ObjectDelete(request *restful.Request, response *restful.Re
 	}
 
 	input := s3.DeleteObjectInput{Bucket: bucketName, Key: objectName}
-	if len(version) > 0 {
-		input.VersioId = version
-	}
 	ctx := common.InitCtxWithAuthInfo(request)
 	rsp, err := s.s3Client.DeleteObject(ctx, &input)
 	if HandleS3Error(response, request, err, rsp.GetErrorCode()) != nil {
