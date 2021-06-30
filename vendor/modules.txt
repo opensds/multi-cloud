@@ -2,7 +2,7 @@
 cloud.google.com/go/compute/metadata
 # contrib.go.opencensus.io/exporter/ocagent v0.4.12
 contrib.go.opencensus.io/exporter/ocagent
-# github.com/Azure/azure-pipeline-go v0.2.1
+# github.com/Azure/azure-pipeline-go v0.2.2
 github.com/Azure/azure-pipeline-go/pipeline
 # github.com/Azure/azure-sdk-for-go v32.4.0+incompatible
 github.com/Azure/azure-sdk-for-go/storage
@@ -156,13 +156,14 @@ github.com/go-git/go-billy/v5/helper/chroot
 github.com/go-git/go-billy/v5/helper/polyfill
 github.com/go-git/go-billy/v5/osfs
 github.com/go-git/go-billy/v5/util
-# github.com/go-git/go-git/v5 v5.0.0
+# github.com/go-git/go-git/v5 v5.1.0
 github.com/go-git/go-git/v5
 github.com/go-git/go-git/v5/config
 github.com/go-git/go-git/v5/internal/revision
 github.com/go-git/go-git/v5/internal/url
 github.com/go-git/go-git/v5/plumbing
 github.com/go-git/go-git/v5/plumbing/cache
+github.com/go-git/go-git/v5/plumbing/color
 github.com/go-git/go-git/v5/plumbing/filemode
 github.com/go-git/go-git/v5/plumbing/format/config
 github.com/go-git/go-git/v5/plumbing/format/diff
@@ -318,7 +319,7 @@ github.com/huaweicloud/huaweicloud-sdk-go-v3/core/response
 github.com/huaweicloud/huaweicloud-sdk-go-v3/core/sdkerr
 github.com/huaweicloud/huaweicloud-sdk-go-v3/services/evs/v2
 github.com/huaweicloud/huaweicloud-sdk-go-v3/services/evs/v2/model
-# github.com/imdario/mergo v0.3.8
+# github.com/imdario/mergo v0.3.9
 github.com/imdario/mergo
 # github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
 github.com/jbenet/go-context/io
@@ -339,13 +340,13 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/kr/text
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
-# github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149
+# github.com/mattn/go-ieproxy v0.0.0-20190702010315-6dee0af9227d
 github.com/mattn/go-ieproxy
 # github.com/micro/cli/v2 v2.1.2
 github.com/micro/cli/v2
 # github.com/micro/go-log v0.1.0
 github.com/micro/go-log
-# github.com/micro/go-micro/v2 v2.6.0
+# github.com/micro/go-micro/v2 v2.9.1
 github.com/micro/go-micro/v2
 github.com/micro/go-micro/v2/api
 github.com/micro/go-micro/v2/auth
@@ -353,6 +354,7 @@ github.com/micro/go-micro/v2/auth/jwt
 github.com/micro/go-micro/v2/auth/provider
 github.com/micro/go-micro/v2/auth/provider/basic
 github.com/micro/go-micro/v2/auth/provider/oauth
+github.com/micro/go-micro/v2/auth/rules
 github.com/micro/go-micro/v2/auth/service
 github.com/micro/go-micro/v2/auth/service/proto
 github.com/micro/go-micro/v2/auth/token
@@ -436,12 +438,11 @@ github.com/micro/go-micro/v2/transport
 github.com/micro/go-micro/v2/transport/http
 github.com/micro/go-micro/v2/transport/memory
 github.com/micro/go-micro/v2/util/addr
+github.com/micro/go-micro/v2/util/auth
 github.com/micro/go-micro/v2/util/backoff
 github.com/micro/go-micro/v2/util/buf
-github.com/micro/go-micro/v2/util/config
 github.com/micro/go-micro/v2/util/grpc
 github.com/micro/go-micro/v2/util/http
-github.com/micro/go-micro/v2/util/jitter
 github.com/micro/go-micro/v2/util/kubernetes/api
 github.com/micro/go-micro/v2/util/kubernetes/client
 github.com/micro/go-micro/v2/util/log
@@ -455,6 +456,11 @@ github.com/micro/go-micro/v2/util/socket
 github.com/micro/go-micro/v2/util/tls
 github.com/micro/go-micro/v2/util/wrapper
 github.com/micro/go-micro/v2/web
+# github.com/micro/go-plugins/registry/kubernetes/v2 v2.9.1
+github.com/micro/go-plugins/registry/kubernetes/v2
+github.com/micro/go-plugins/registry/kubernetes/v2/client
+github.com/micro/go-plugins/registry/kubernetes/v2/client/api
+github.com/micro/go-plugins/registry/kubernetes/v2/client/watch
 # github.com/miekg/dns v1.1.27
 github.com/miekg/dns
 # github.com/mitchellh/go-homedir v1.1.0
@@ -528,7 +534,7 @@ github.com/stretchr/testify/mock
 github.com/subosito/gotenv
 # github.com/ugorji/go/codec v1.1.7
 github.com/ugorji/go/codec
-# github.com/webrtcn/s3client v0.0.0-20180425024203-6590fd04c8e8
+# github.com/webrtcn/s3client v0.0.0-20200722082950-4e45a005eff3
 github.com/webrtcn/s3client
 github.com/webrtcn/s3client/models
 # github.com/xanzy/ssh-agent v0.2.1
@@ -595,7 +601,7 @@ golang.org/x/crypto/ssh/knownhosts
 # golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
+# golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -622,8 +628,9 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
+# golang.org/x/sys v0.0.0-20200523222454-059865788121
 golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry

@@ -167,11 +167,10 @@ func (k *kubernetes) getService(labels map[string]string, opts ...client.GetOpti
 
 			// parse out deployment status and inject into service metadata
 			if len(kdep.Status.Conditions) > 0 {
-				svc.Metadata["status"] = kdep.Status.Conditions[0].Type
+				svc.Status(kdep.Status.Conditions[0].Type, nil)
 				svc.Metadata["started"] = kdep.Status.Conditions[0].LastUpdateTime
-				delete(svc.Metadata, "error")
 			} else {
-				svc.Metadata["status"] = "n/a"
+				svc.Status("n/a", nil)
 			}
 
 			// get the real status
@@ -214,8 +213,7 @@ func (k *kubernetes) getService(labels map[string]string, opts ...client.GetOpti
 					}
 				}
 				// TODO: set from terminated
-
-				svc.Metadata["status"] = status
+				svc.Status(status, nil)
 			}
 
 			// save deployment
@@ -252,12 +250,12 @@ func (k *kubernetes) run(events <-chan runtime.Event) {
 			case runtime.Update:
 				// only process if there's an actual service
 				// we do not update all the things individually
-				if len(event.Service) == 0 {
+				if event.Service == nil {
 					continue
 				}
 
 				// format the name
-				name := client.Format(event.Service)
+				name := client.Format(event.Service.Name)
 
 				// set the default labels
 				labels := map[string]string{
@@ -265,8 +263,8 @@ func (k *kubernetes) run(events <-chan runtime.Event) {
 					"name":  name,
 				}
 
-				if len(event.Version) > 0 {
-					labels["version"] = event.Version
+				if len(event.Service.Version) > 0 {
+					labels["version"] = event.Service.Version
 				}
 
 				// get the deployment status

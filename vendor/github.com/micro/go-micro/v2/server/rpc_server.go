@@ -20,6 +20,7 @@ import (
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/transport"
 	"github.com/micro/go-micro/v2/util/addr"
+	"github.com/micro/go-micro/v2/util/backoff"
 	mnet "github.com/micro/go-micro/v2/util/net"
 	"github.com/micro/go-micro/v2/util/socket"
 )
@@ -362,11 +363,12 @@ func (s *rpcServer) ServeConn(sock transport.Socket) {
 			r = rpcRouter{h: handler}
 		}
 
+		// wait for two coroutines to exit
+		// serve the request and process the outbound messages
+		wg.Add(2)
+
 		// process the outbound messages from the socket
 		go func(id string, psock *socket.Socket) {
-			// wait for processing to exit
-			wg.Add(1)
-
 			defer func() {
 				// TODO: don't hack this but if its grpc just break out of the stream
 				// We do this because the underlying connection is h2 and its a stream
@@ -404,9 +406,6 @@ func (s *rpcServer) ServeConn(sock transport.Socket) {
 
 		// serve the request in a go routine as this may be a stream
 		go func(id string, psock *socket.Socket) {
-			// add to the waitgroup
-			wg.Add(1)
-
 			defer func() {
 				// release the socket
 				pool.Release(psock)
@@ -514,18 +513,39 @@ func (s *rpcServer) Subscribe(sb Subscriber) error {
 }
 
 func (s *rpcServer) Register() error {
-
 	s.RLock()
 	rsvc := s.rsvc
 	config := s.Options()
 	s.RUnlock()
 
-	if rsvc != nil {
+	regFunc := func(service *registry.Service) error {
+		// create registry options
 		rOpts := []registry.RegisterOption{registry.RegisterTTL(config.RegisterTTL)}
-		if err := config.Registry.Register(rsvc, rOpts...); err != nil {
-			return err
+
+		var regErr error
+
+		for i := 0; i < 3; i++ {
+			// attempt to register
+			if err := config.Registry.Register(service, rOpts...); err != nil {
+				// set the error
+				regErr = err
+				// backoff then retry
+				time.Sleep(backoff.Do(i + 1))
+				continue
+			}
+			// success so nil error
+			regErr = nil
+			break
 		}
 
+		return regErr
+	}
+
+	// have we registered before?
+	if rsvc != nil {
+		if err := regFunc(rsvc); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -635,10 +655,8 @@ func (s *rpcServer) Register() error {
 		}
 	}
 
-	// create registry options
-	rOpts := []registry.RegisterOption{registry.RegisterTTL(config.RegisterTTL)}
-
-	if err := config.Registry.Register(service, rOpts...); err != nil {
+	// register the service
+	if err := regFunc(service); err != nil {
 		return err
 	}
 

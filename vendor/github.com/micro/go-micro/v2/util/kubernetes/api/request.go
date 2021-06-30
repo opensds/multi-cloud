@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/micro/go-micro/v2/logger"
 )
 
 // Request is used to construct a http request for the k8s API.
@@ -30,7 +32,7 @@ type Request struct {
 	err error
 }
 
-// Params is the object to pass in to set paramaters
+// Params is the object to pass in to set parameters
 // on a request.
 type Params struct {
 	LabelSelector map[string]string
@@ -217,6 +219,7 @@ func (r *Request) Do() *Response {
 		}
 	}
 
+	logger.Debugf("[Kubernetes] %v %v", req.Method, req.URL.String())
 	res, err := r.client.Do(req)
 	if err != nil {
 		return &Response{

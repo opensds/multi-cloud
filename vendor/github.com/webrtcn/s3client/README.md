@@ -67,3 +67,7 @@ func main {
 }
 
 ```
+
+## License
+
+Apache2.0

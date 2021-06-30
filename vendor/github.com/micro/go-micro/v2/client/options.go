@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/micro/go-micro/v2/auth"
 	"github.com/micro/go-micro/v2/broker"
 	"github.com/micro/go-micro/v2/client/selector"
 	"github.com/micro/go-micro/v2/codec"
@@ -17,7 +16,6 @@ type Options struct {
 	ContentType string
 
 	// Plugged interfaces
-	Auth      auth.Auth
 	Broker    broker.Broker
 	Codecs    map[string]codec.NewCodec
 	Registry  registry.Registry
@@ -30,6 +28,9 @@ type Options struct {
 	// Connection Pool
 	PoolSize int
 	PoolTTL  time.Duration
+
+	// Response cache
+	Cache *Cache
 
 	// Middleware for client
 	Wrappers []Wrapper
@@ -61,6 +62,8 @@ type CallOptions struct {
 	StreamTimeout time.Duration
 	// Use the services own auth token
 	ServiceToken bool
+	// Duration to cache the response for
+	CacheExpiry time.Duration
 
 	// Middleware for low level call func
 	CallWrappers []CallWrapper
@@ -93,6 +96,7 @@ type RequestOptions struct {
 
 func NewOptions(options ...Option) Options {
 	opts := Options{
+		Cache:       NewCache(),
 		Context:     context.Background(),
 		ContentType: DefaultContentType,
 		Codecs:      make(map[string]codec.NewCodec),
@@ -105,7 +109,6 @@ func NewOptions(options ...Option) Options {
 		},
 		PoolSize:  DefaultPoolSize,
 		PoolTTL:   DefaultPoolTTL,
-		Auth:      auth.DefaultAuth,
 		Broker:    broker.DefaultBroker,
 		Selector:  selector.DefaultSelector,
 		Registry:  registry.DefaultRegistry,
@@ -123,13 +126,6 @@ func NewOptions(options ...Option) Options {
 func Broker(b broker.Broker) Option {
 	return func(o *Options) {
 		o.Broker = b
-	}
-}
-
-// Auth to be used when making a request
-func Auth(a auth.Auth) Option {
-	return func(o *Options) {
-		o.Auth = a
 	}
 }
 
@@ -331,6 +327,14 @@ func WithDialTimeout(d time.Duration) CallOption {
 func WithServiceToken() CallOption {
 	return func(o *CallOptions) {
 		o.ServiceToken = true
+	}
+}
+
+// WithCache is a CallOption which sets the duration the response
+// shoull be cached for
+func WithCache(c time.Duration) CallOption {
+	return func(o *CallOptions) {
+		o.CacheExpiry = c
 	}
 }
 

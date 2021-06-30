@@ -34,7 +34,8 @@ type ServiceEntry struct {
 
 // complete is used to check if we have all the info we need
 func (s *ServiceEntry) complete() bool {
-	return (s.AddrV4 != nil || s.AddrV6 != nil || s.Addr != nil) && s.Port != 0 && s.hasTXT
+
+	return (len(s.AddrV4) > 0 || len(s.AddrV6) > 0 || len(s.Addr) > 0) && s.Port != 0 && s.hasTXT
 }
 
 // QueryParam is used to customize how a Lookup is performed
@@ -347,7 +348,12 @@ func (c *client) query(params *QueryParam) error {
 		select {
 		case resp := <-msgCh:
 			inp := messageToEntry(resp, inprogress)
+
 			if inp == nil {
+				continue
+			}
+			if len(resp.Question) == 0 || resp.Question[0].Name != m.Question[0].Name {
+				// discard anything which we've not asked for
 				continue
 			}
 
@@ -356,6 +362,7 @@ func (c *client) query(params *QueryParam) error {
 				if inp.sent {
 					continue
 				}
+
 				inp.sent = true
 				select {
 				case params.Entries <- inp:

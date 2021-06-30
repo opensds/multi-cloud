@@ -11,8 +11,10 @@ import (
 	"github.com/micro/go-micro/v2/auth/provider"
 	"github.com/micro/go-micro/v2/broker"
 	"github.com/micro/go-micro/v2/client"
+	"github.com/micro/go-micro/v2/client/grpc"
 	"github.com/micro/go-micro/v2/client/selector"
 	"github.com/micro/go-micro/v2/config"
+	configSrc "github.com/micro/go-micro/v2/config/source"
 	configSrv "github.com/micro/go-micro/v2/config/source/service"
 	"github.com/micro/go-micro/v2/debug/profile"
 	"github.com/micro/go-micro/v2/debug/profile/http"
@@ -20,10 +22,13 @@ import (
 	"github.com/micro/go-micro/v2/debug/trace"
 	"github.com/micro/go-micro/v2/logger"
 	"github.com/micro/go-micro/v2/registry"
+	registrySrv "github.com/micro/go-micro/v2/registry/service"
 	"github.com/micro/go-micro/v2/runtime"
 	"github.com/micro/go-micro/v2/server"
 	"github.com/micro/go-micro/v2/store"
 	"github.com/micro/go-micro/v2/transport"
+	authutil "github.com/micro/go-micro/v2/util/auth"
+	"github.com/micro/go-micro/v2/util/wrapper"
 
 	// clients
 	cgrpc "github.com/micro/go-micro/v2/client/grpc"
@@ -271,6 +276,12 @@ var (
 			Usage:   "Account secret used for client authentication",
 		},
 		&cli.StringFlag{
+			Name:    "auth_namespace",
+			EnvVars: []string{"MICRO_AUTH_NAMESPACE"},
+			Usage:   "Namespace for the services auth account",
+			Value:   "go.micro",
+		},
+		&cli.StringFlag{
 			Name:    "auth_public_key",
 			EnvVars: []string{"MICRO_AUTH_PUBLIC_KEY"},
 			Usage:   "Public key for JWT auth (base64 encoded PEM)",
@@ -458,9 +469,16 @@ func (c *cmd) Options() Options {
 
 func (c *cmd) Before(ctx *cli.Context) error {
 	// If flags are set then use them otherwise do nothing
-	var authOpts []auth.Option
 	var serverOpts []server.Option
 	var clientOpts []client.Option
+
+	// setup a client to use when calling the runtime. It is important the auth client is wrapped
+	// after the cache client since the wrappers are applied in reverse order and the cache will use
+	// some of the headers set by the auth client.
+	authFn := func() auth.Auth { return *c.opts.Auth }
+	cacheFn := func() *client.Cache { return (*c.opts.Client).Options().Cache }
+	microClient := wrapper.CacheClient(cacheFn, grpc.NewClient())
+	microClient = wrapper.AuthClient(authFn, microClient)
 
 	// Set the store
 	if name := ctx.String("store"); len(name) > 0 {
@@ -469,7 +487,7 @@ func (c *cmd) Before(ctx *cli.Context) error {
 			return fmt.Errorf("Unsupported store: %s", name)
 		}
 
-		*c.opts.Store = s()
+		*c.opts.Store = s(store.WithClient(microClient))
 	}
 
 	// Set the runtime
@@ -479,7 +497,7 @@ func (c *cmd) Before(ctx *cli.Context) error {
 			return fmt.Errorf("Unsupported runtime: %s", name)
 		}
 
-		*c.opts.Runtime = r()
+		*c.opts.Runtime = r(runtime.WithClient(microClient))
 	}
 
 	// Set the tracer
@@ -490,28 +508,6 @@ func (c *cmd) Before(ctx *cli.Context) error {
 		}
 
 		*c.opts.Tracer = r()
-	}
-
-	// Set the auth
-	if name := ctx.String("auth"); len(name) > 0 {
-		a, ok := c.opts.Auths[name]
-		if !ok {
-			return fmt.Errorf("Unsupported auth: %s", name)
-		}
-
-		*c.opts.Auth = a()
-		clientOpts = append(clientOpts, client.Auth(*c.opts.Auth))
-		serverOpts = append(serverOpts, server.Auth(*c.opts.Auth))
-	}
-
-	// Set the profile
-	if name := ctx.String("profile"); len(name) > 0 {
-		p, ok := c.opts.Profiles[name]
-		if !ok {
-			return fmt.Errorf("Unsupported profile: %s", name)
-		}
-
-		*c.opts.Profile = p()
 	}
 
 	// Set the client
@@ -530,16 +526,58 @@ func (c *cmd) Before(ctx *cli.Context) error {
 		}
 	}
 
-	// Set the broker
-	if name := ctx.String("broker"); len(name) > 0 && (*c.opts.Broker).String() != name {
-		b, ok := c.opts.Brokers[name]
+	// Setup auth
+	authOpts := []auth.Option{auth.WithClient(microClient)}
+
+	if len(ctx.String("auth_id")) > 0 || len(ctx.String("auth_secret")) > 0 {
+		authOpts = append(authOpts, auth.Credentials(
+			ctx.String("auth_id"), ctx.String("auth_secret"),
+		))
+	}
+	if len(ctx.String("auth_public_key")) > 0 {
+		authOpts = append(authOpts, auth.PublicKey(ctx.String("auth_public_key")))
+	}
+	if len(ctx.String("auth_private_key")) > 0 {
+		authOpts = append(authOpts, auth.PrivateKey(ctx.String("auth_private_key")))
+	}
+	if len(ctx.String("auth_namespace")) > 0 {
+		authOpts = append(authOpts, auth.Namespace(ctx.String("auth_namespace")))
+	}
+	if name := ctx.String("auth_provider"); len(name) > 0 {
+		p, ok := DefaultAuthProviders[name]
 		if !ok {
-			return fmt.Errorf("Broker %s not found", name)
+			return fmt.Errorf("AuthProvider %s not found", name)
 		}
 
-		*c.opts.Broker = b()
-		serverOpts = append(serverOpts, server.Broker(*c.opts.Broker))
-		clientOpts = append(clientOpts, client.Broker(*c.opts.Broker))
+		var provOpts []provider.Option
+		clientID := ctx.String("auth_provider_client_id")
+		clientSecret := ctx.String("auth_provider_client_secret")
+		if len(clientID) > 0 || len(clientSecret) > 0 {
+			provOpts = append(provOpts, provider.Credentials(clientID, clientSecret))
+		}
+		if e := ctx.String("auth_provider_endpoint"); len(e) > 0 {
+			provOpts = append(provOpts, provider.Endpoint(e))
+		}
+		if r := ctx.String("auth_provider_redirect"); len(r) > 0 {
+			provOpts = append(provOpts, provider.Redirect(r))
+		}
+		if s := ctx.String("auth_provider_scope"); len(s) > 0 {
+			provOpts = append(provOpts, provider.Scope(s))
+		}
+
+		authOpts = append(authOpts, auth.Provider(p(provOpts...)))
+	}
+
+	// Set the auth
+	if name := ctx.String("auth"); len(name) > 0 {
+		a, ok := c.opts.Auths[name]
+		if !ok {
+			return fmt.Errorf("Unsupported auth: %s", name)
+		}
+		*c.opts.Auth = a(authOpts...)
+		serverOpts = append(serverOpts, server.Auth(*c.opts.Auth))
+	} else {
+		(*c.opts.Auth).Init(authOpts...)
 	}
 
 	// Set the registry
@@ -549,7 +587,7 @@ func (c *cmd) Before(ctx *cli.Context) error {
 			return fmt.Errorf("Registry %s not found", name)
 		}
 
-		*c.opts.Registry = r()
+		*c.opts.Registry = r(registrySrv.WithClient(microClient))
 		serverOpts = append(serverOpts, server.Registry(*c.opts.Registry))
 		clientOpts = append(clientOpts, client.Registry(*c.opts.Registry))
 
@@ -562,6 +600,34 @@ func (c *cmd) Before(ctx *cli.Context) error {
 		if err := (*c.opts.Broker).Init(broker.Registry(*c.opts.Registry)); err != nil {
 			logger.Fatalf("Error configuring broker: %v", err)
 		}
+	}
+
+	// generate the services auth account
+	serverID := (*c.opts.Server).Options().Id
+	if err := authutil.Generate(serverID, c.App().Name, (*c.opts.Auth)); err != nil {
+		return err
+	}
+
+	// Set the profile
+	if name := ctx.String("profile"); len(name) > 0 {
+		p, ok := c.opts.Profiles[name]
+		if !ok {
+			return fmt.Errorf("Unsupported profile: %s", name)
+		}
+
+		*c.opts.Profile = p()
+	}
+
+	// Set the broker
+	if name := ctx.String("broker"); len(name) > 0 && (*c.opts.Broker).String() != name {
+		b, ok := c.opts.Brokers[name]
+		if !ok {
+			return fmt.Errorf("Broker %s not found", name)
+		}
+
+		*c.opts.Broker = b()
+		serverOpts = append(serverOpts, server.Broker(*c.opts.Broker))
+		clientOpts = append(clientOpts, client.Broker(*c.opts.Broker))
 	}
 
 	// Set the selector
@@ -675,48 +741,8 @@ func (c *cmd) Before(ctx *cli.Context) error {
 		}
 	}
 
-	if len(ctx.String("auth_id")) > 0 || len(ctx.String("auth_secret")) > 0 {
-		authOpts = append(authOpts, auth.Credentials(
-			ctx.String("auth_id"), ctx.String("auth_secret"),
-		))
-	}
-
-	if len(ctx.String("auth_public_key")) > 0 {
-		authOpts = append(authOpts, auth.PublicKey(ctx.String("auth_public_key")))
-	}
-	if len(ctx.String("auth_private_key")) > 0 {
-		authOpts = append(authOpts, auth.PrivateKey(ctx.String("auth_private_key")))
-	}
-
-	if name := ctx.String("auth_provider"); len(name) > 0 {
-		p, ok := DefaultAuthProviders[name]
-		if !ok {
-			return fmt.Errorf("AuthProvider %s not found", name)
-		}
-
-		var provOpts []provider.Option
-
-		clientID := ctx.String("auth_provider_client_id")
-		clientSecret := ctx.String("auth_provider_client_secret")
-		if len(clientID) > 0 || len(clientSecret) > 0 {
-			provOpts = append(provOpts, provider.Credentials(clientID, clientSecret))
-		}
-		if e := ctx.String("auth_provider_endpoint"); len(e) > 0 {
-			provOpts = append(provOpts, provider.Endpoint(e))
-		}
-		if r := ctx.String("auth_provider_redirect"); len(r) > 0 {
-			provOpts = append(provOpts, provider.Redirect(r))
-		}
-		if s := ctx.String("auth_provider_scope"); len(s) > 0 {
-			provOpts = append(provOpts, provider.Scope(s))
-		}
-
-		authOpts = append(authOpts, auth.Provider(p(provOpts...)))
-	}
-	(*c.opts.Auth).Init(authOpts...)
-
 	if ctx.String("config") == "service" {
-		opt := config.WithSource(configSrv.NewSource())
+		opt := config.WithSource(configSrv.NewSource(configSrc.WithClient(microClient)))
 		if err := (*c.opts.Config).Init(opt); err != nil {
 			logger.Fatalf("Error configuring config: %v", err)
 		}

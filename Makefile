@@ -30,28 +30,28 @@ prebuild:
 	mkdir -p  $(BUILD_DIR)
 
 api: prebuild
-	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/api github.com/opensds/multi-cloud/api/cmd
+	CGO_ENABLED=0 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-static"' -o $(BUILD_DIR)/api github.com/opensds/multi-cloud/api/cmd
 
 aksk: prebuild
 	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/aksk github.com/opensds/multi-cloud/aksk/cmd
 
 backend: prebuild
-	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/backend github.com/opensds/multi-cloud/backend/cmd
+	CGO_ENABLED=0 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-static"' -o $(BUILD_DIR)/backend github.com/opensds/multi-cloud/backend/cmd
 
 s3: prebuild
-	CGO_ENABLED=1 GOOS=linux go build -ldflags '-w -s -extldflags "-dynamic"' -o $(BUILD_DIR)/s3 github.com/opensds/multi-cloud/s3/cmd
+	CGO_ENABLED=1 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-dynamic"' -o $(BUILD_DIR)/s3 github.com/opensds/multi-cloud/s3/cmd
 
 dataflow: prebuild
-	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/dataflow github.com/opensds/multi-cloud/dataflow/cmd
+	CGO_ENABLED=0 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-static"' -o $(BUILD_DIR)/dataflow github.com/opensds/multi-cloud/dataflow/cmd
 
 datamover: prebuild
-	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/datamover github.com/opensds/multi-cloud/datamover/cmd
+	CGO_ENABLED=0 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-static"' -o $(BUILD_DIR)/datamover github.com/opensds/multi-cloud/datamover/cmd
 
 file: prebuild
-	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/file github.com/opensds/multi-cloud/file/cmd
+	CGO_ENABLED=0 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-static"' -o $(BUILD_DIR)/file github.com/opensds/multi-cloud/file/cmd
 
 block: prebuild
-	CGO_ENABLED=0 GOOS=linux go build -ldflags '-w -s -extldflags "-static"' -o $(BUILD_DIR)/block github.com/opensds/multi-cloud/block/cmd
+	CGO_ENABLED=0 GOOS=linux go build -ldflags 'GOFLAGS=-mod=vendor -w -s -extldflags "-static"' -o $(BUILD_DIR)/block github.com/opensds/multi-cloud/block/cmd
 
 docker: build
 

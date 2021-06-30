@@ -67,22 +67,38 @@ message ReadResponse {
 	repeated Service services = 1;
 }
 
+message DeleteOptions {
+}
+
 message DeleteRequest {
 	Service service = 1;
+	DeleteOptions options = 2;
 }
 
 message DeleteResponse {}
 
+message UpdateOptions {
+}
+
 message UpdateRequest {
 	Service service = 1;
+	UpdateOptions options = 2;
 }
 
 message UpdateResponse {}
 
-message ListRequest {}
+message ListOptions {
+}
+
+message ListRequest {
+	ListOptions options = 1;
+}
 
 message ListResponse {
 	repeated Service services = 1;
+}
+
+message LogsOptions {
 }
 
 message LogsRequest{
@@ -96,6 +112,8 @@ message LogsRequest{
 	// before the current time
 	// from which to show logs
 	int64 since = 4;
+	// options to use
+	LogsOptions options = 5;
 }
 
 message LogRecord {
